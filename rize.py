@@ -91,7 +91,8 @@ def costs(item):
     monthly_ri = item[1]*float(730*float(rates[options.region][item[0][0]]['hu-1y'][1]) + float(rates[options.region][item[0][0]]['hu-1y'][0])/12)
     yearly_ri = 12*monthly_ri
 
-    return (('%.2f'%monthly_ondemand, '%.2f'%yearly_ondemand), ('%.2f'%monthly_ri, '%.2f'%yearly_ri))
+    upfront_cost = item[1]*float(rates[options.region][item[0][0]]['hu-1y'][0])
+    return (('%.2f'%monthly_ondemand, '%.2f'%yearly_ondemand), ('%.2f'%monthly_ri, '%.2f'%yearly_ri), upfront_cost)
 
 def summarize_tuples(items):
     ''' takes a tuple of properties, and summarizes into a dict.
@@ -139,6 +140,7 @@ if __name__ == '__main__':
 
     yearly_savings = float(0)
     monthly_savings = float(0)
+    upfront_cost = float(0)
     num_instances = 0
     res_instances = 0
 
@@ -158,6 +160,7 @@ if __name__ == '__main__':
         yearly = float(cost[0][1]) - float(cost[1][1])
         yearly_savings += yearly
         monthly_savings += monthly
+        upfront_cost += float(cost[2])
 
         num_instances += int(i[1])
         res_instances += int(res_count)
@@ -166,7 +169,9 @@ if __name__ == '__main__':
 
     print table.draw()
     print "\nTotals:"
-    print "running instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s" % (
-        num_instances, res_instances, locale.currency(monthly_savings, grouping=True), locale.currency(yearly_savings, grouping=True))
+    print "running instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s\n\tupfront cost: %s" % (
+        num_instances, res_instances, locale.currency(monthly_savings, grouping=True),
+        locale.currency(yearly_savings, grouping=True), locale.currency(upfront_cost, grouping=True)
+        )
 
 
