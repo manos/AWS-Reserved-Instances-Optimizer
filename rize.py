@@ -24,14 +24,14 @@ import locale
 import texttable
 from optparse import OptionParser
 
+locale.setlocale(locale.LC_ALL, '')
+
 parser = OptionParser("usage: %prog [options]")
 parser.add_option("-d", "--debug", default=None, action="store_true", help="enable debug output")
 parser.add_option("-l", "--list", default=None, action="store_true", help="list all reservations and exit")
 parser.add_option("-e", "--exclude", metavar="regex", default=None, help="exclude a set of instances by security group name regex")
 parser.add_option("-r", "--region", default='us-east-1', help="ec2 region to connect to")
 (options, args) = parser.parse_args()
-
-locale.setlocale(locale.LC_ALL, '')
 
 # set up logging
 if options.debug: log_level = logging.DEBUG
@@ -40,7 +40,7 @@ else:             log_level = logging.INFO
 logging.basicConfig(stream=sys.stdout, level=log_level)
 logging.basicConfig(stream=sys.stderr, level=(logging.ERROR,logging.CRITICAL))
 
-money = { 'us-east-1': { 'm1.small':    { 'hourly': .08,  'hu-1y': (195, .016) },
+rates = { 'us-east-1': { 'm1.small':    { 'hourly': .08,  'hu-1y': (195, .016) },
                          'm1.medium':   { 'hourly': .16,  'hu-1y': (390, .032) },
                          'm1.large':    { 'hourly': .32,  'hu-1y': (780, .064) },
                          'm1.xlarge':   { 'hourly': .64,  'hu-1y': (1560, .128) },
@@ -50,21 +50,44 @@ money = { 'us-east-1': { 'm1.small':    { 'hourly': .08,  'hu-1y': (195, .016) }
                          'm2.4xlarge':  { 'hourly': 1.80, 'hu-1y': (4120, .352) },
                          'c1.medium':   { 'hourly': .165, 'hu-1y': (500, .04) },
                          'c1.xlarge':   { 'hourly': .66,  'hu-1y': (2000, .16) },
-                         'cc1.4xlarge': { 'hourly': 1.30,  'hu-1y': (4060, .297) },
-                         'cc2.8xlarge': { 'hourly': 2.40,  'hu-1y': (5000, .361) },
-                         'cg1.4xlarge': { 'hourly': 2.10,  'hu-1y': (6830, .494) },
+                         'cc1.4xlarge': { 'hourly': 1.30, 'hu-1y': (4060, .297) },
+                         'cc2.8xlarge': { 'hourly': 2.40, 'hu-1y': (5000, .361) },
+                         'cg1.4xlarge': { 'hourly': 2.10, 'hu-1y': (6830, .494) },
 
-        }, 'us-west-2': {}
+          },
+          'us-west-2': { 'm1.small':    { 'hourly': .08,  'hu-1y': (195, .016) },
+                         'm1.medium':   { 'hourly': .16,  'hu-1y': (390, .032) },
+                         'm1.large':    { 'hourly': .32,  'hu-1y': (780, .064) },
+                         'm1.xlarge':   { 'hourly': .64,  'hu-1y': (1560, .128) },
+                         't1.micro':    { 'hourly': .02,  'hu-1y': (62, .005) },
+                         'm2.xlarge':   { 'hourly': .45,  'hu-1y': (1030, .088) },
+                         'm2.2xlarge':  { 'hourly': .90,  'hu-1y': (2060, .176) },
+                         'm2.4xlarge':  { 'hourly': 1.80, 'hu-1y': (4120, .352) },
+                         'c1.medium':   { 'hourly': .165, 'hu-1y': (500, .04) },
+                         'c1.xlarge':   { 'hourly': .66,  'hu-1y': (2000, .16) },
+
+          },
+          'eu-west-1': { 'm1.small':    { 'hourly': .085, 'hu-1y': (195, .025) },
+                         'm1.medium':   { 'hourly': .17,  'hu-1y': (390, .05) },
+                         'm1.large':    { 'hourly': .34,  'hu-1y': (780, .10) },
+                         'm1.xlarge':   { 'hourly': .68,  'hu-1y': (1560, .20) },
+                         't1.micro':    { 'hourly': .02,  'hu-1y': (62, .008) },
+                         'm2.xlarge':   { 'hourly': .506, 'hu-1y': (1030, .148) },
+                         'm2.2xlarge':  { 'hourly': 1.012,'hu-1y': (2060, .296) },
+                         'm2.4xlarge':  { 'hourly': 2.024,'hu-1y': (4120, .592) },
+                         'c1.medium':   { 'hourly': .186, 'hu-1y': (500, .063) },
+                         'c1.xlarge':   { 'hourly': .744, 'hu-1y': (2000, .25) },
+          },
         }
 
 def costs(item):
     ''' takes a tuple of properties, and returns ((monthly, yearly) (monthly, yearly)) cost
         of (ondemand, 1-yr-heavy-utilization-ri)
         imput: ((instance_type, availability_zone), instance_count) '''
-    monthly_ondemand = item[1]*float(730*float(money[options.region][item[0][0]]['hourly']))
+    monthly_ondemand = item[1]*float(730*float(rates[options.region][item[0][0]]['hourly']))
     yearly_ondemand = 12*monthly_ondemand
 
-    monthly_ri = item[1]*float(730*float(money[options.region][item[0][0]]['hu-1y'][1]) + float(money[options.region][item[0][0]]['hu-1y'][0])/12)
+    monthly_ri = item[1]*float(730*float(rates[options.region][item[0][0]]['hu-1y'][1]) + float(rates[options.region][item[0][0]]['hu-1y'][0])/12)
     yearly_ri = 12*monthly_ri
 
     return (('%.2f'%monthly_ondemand, '%.2f'%yearly_ondemand), ('%.2f'%monthly_ri, '%.2f'%yearly_ri))
