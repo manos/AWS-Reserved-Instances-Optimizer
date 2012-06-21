@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
     print table.draw()
     print "\nTotals:"
-    print "running instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s\n\tupfront cost: %s" % (
+    print "running instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s\nupfront cost (already amortized in 'savings' calculations): %s" % (
         num_instances, res_instances, locale.currency(monthly_savings, grouping=True),
         locale.currency(yearly_savings, grouping=True), locale.currency(upfront_cost, grouping=True)
         )
