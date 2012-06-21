@@ -143,54 +143,76 @@ if __name__ == '__main__':
     yearly_savings = float(0)
     monthly_savings = float(0)
     upfront_cost = float(0)
-    num_instances = 0
+    total_instances = 0
     res_instances = 0
+    monthly_od_sum = 0
+    monthly_ri_sum = 0
 
     table = texttable.Texttable(max_width=0)
     table.set_deco(texttable.Texttable.HEADER)
-    table.set_cols_dtype(['t', 't', 't', 't', 't', 't'])
-    table.set_cols_align(["l", "c", "c", "c", "r", "r"])
-    table.add_row(["instance type", "zone", "# running", "# reserved", "monthly savings", "yearly savings"])
+    table.set_cols_dtype(['t', 't', 't', 't', 't', 't', 't', 't'])
+    table.set_cols_align(["l", "c", "c", "c", "r", "r", "r", "r"])
+    table.add_row(["instance type", "zone", "# running", "# reserved", "monthly savings", "yearly savings", "current monthly", "only_RIs monthly"])
 
     for i in sorted(ins_dict):
         # dict i is: {(inst_type, az): count}
 
         # find # of reserved instances, and # on-demand:
-        if i[0] in res_dict: res_count = res_dict[i[0]]
+        if i[0] in res_dict: res_count = int(res_dict[i[0]])
         else: res_count = 0
 
-        od_count = i[1]
+        run_count = int(i[1])
 
         od, ri, upfront = costs(tuple(i[0]))
         od_monthly, od_yearly = od
         ri_monthly, ri_yearly = ri
 
-        # determine monthly savings, if we're running more than are reserved:
-        diff = int(od_count) - int(res_count)
+        od_monthly = float(od_monthly)
+        od_yearly = float(od_yearly)
+        ri_monthly = float(ri_monthly)
+        ri_yearly = float(ri_yearly)
 
-        if diff > 0:
-            monthly = diff*(float(od_monthly) - float(ri_monthly))
-            yearly = diff*(float(od_yearly) - float(ri_yearly))
-            upfront_cur = float(upfront*diff)
+        # determine monthly savings, if we're running more than are reserved:
+        od_count = int(run_count) - int(res_count)
+
+        if od_count > 0:
+            monthly = od_count*(od_monthly - ri_monthly)
+            yearly = od_count*(od_yearly - ri_yearly)
+            upfront_cur = float(upfront*od_count)
+            cur_monthly = (od_count*od_monthly) + (res_count*ri_monthly)
+            all_ri_monthly = (od_count + res_count)*ri_monthly
+            cur_yearly = (od_count*od_yearly) + (res_count*ri_yearly)
+            all_ri_yearly = (od_count + res_count)*ri_yearly
         else:
             monthly = 0
             yearly = 0
             upfront_cur = 0
+            cur_monthly = (res_count*ri_monthly)
+            all_ri_monthly = (res_count)*ri_monthly
+            cur_yearly = (res_count*ri_yearly)
+            all_ri_yearly = (res_count)*ri_yearly
 
         # totals
         yearly_savings += yearly
         monthly_savings += monthly
         upfront_cost += float(upfront_cur)
+        monthly_od_sum += cur_monthly
+        monthly_ri_sum += all_ri_monthly
 
-        num_instances += int(od_count)
+        total_instances += int(run_count)
         res_instances += int(res_count)
 
-        table.add_row([i[0][0], i[0][1], od_count, res_count, locale.currency(monthly, grouping=True), locale.currency(yearly, grouping=True)])
+        table.add_row([i[0][0], i[0][1], run_count, res_count, locale.currency(monthly, grouping=True),
+            locale.currency(yearly, grouping=True), locale.currency(cur_monthly, grouping=True), locale.currency(all_ri_monthly, grouping=True)
+            ])
 
+    table.add_row(['Totals:', '','','','','','','',])
+    table.add_row([' ', ' ', total_instances, res_instances, locale.currency(monthly_savings, grouping=True),
+            locale.currency(yearly_savings, grouping=True), locale.currency(monthly_od_sum, grouping=True), locale.currency(monthly_ri_sum, grouping=True)
+            ])
     print table.draw()
-    print "\nTotals:"
-    print "running instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s\nupfront cost (already amortized in 'savings' calculations): %s" % (
-        num_instances, res_instances, locale.currency(monthly_savings, grouping=True),
+    print "\nsavings potential:\n\tmonthly: %s, yearly: %s\nupfront cost (already amortized in 'savings' calculations): %s" % (
+        locale.currency(monthly_savings, grouping=True),
         locale.currency(yearly_savings, grouping=True), locale.currency(upfront_cost, grouping=True)
         )
 
