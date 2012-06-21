@@ -1,0 +1,25 @@
+rize.py:
+
+Script to analyze reserved instance utilization.
+
+Identifies:
+  - reservations that aren't being used
+  - running instances that aren't reserved
+  - cost savings if you were to reserve all running on-demand instances
+
+Supports us-east-1, us-west-2, eu-west-1.
+
+Requires: ~/.boto, boto lib, texttable lib
+
+Running:
+./rize.py
+
+# run, but exclude instances matching -e regex
+./rize.py -e '^ElasticMap.*'
+
+# run in us-west-2,
+./rize.py -r us-west-2
+
+# list all reserved instances and exit
+./rize.py -l
+

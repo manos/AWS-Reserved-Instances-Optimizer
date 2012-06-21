@@ -15,6 +15,7 @@
 #
 # Requires: ~/.boto, boto lib, texttable lib
 #
+#
 import sys
 import os
 import re
@@ -29,7 +30,7 @@ locale.setlocale(locale.LC_ALL, '')
 parser = OptionParser("usage: %prog [options]")
 parser.add_option("-d", "--debug", default=None, action="store_true", help="enable debug output")
 parser.add_option("-l", "--list", default=None, action="store_true", help="list all reservations and exit")
-parser.add_option("-e", "--exclude", metavar="regex", default=None, help="exclude a set of instances by security group name regex")
+parser.add_option("-e", "--exclude", metavar="regex", default='__None__', help="exclude a set of instances by security group name regex")
 parser.add_option("-r", "--region", default='us-east-1', help="ec2 region to connect to")
 (options, args) = parser.parse_args()
 
@@ -91,6 +92,7 @@ def costs(item):
     yearly_ri = 12*monthly_ri
 
     return (('%.2f'%monthly_ondemand, '%.2f'%yearly_ondemand), ('%.2f'%monthly_ri, '%.2f'%yearly_ri))
+
 def summarize_tuples(items):
     ''' takes a tuple of properties, and summarizes into a dict.
         imput: (instance_type, availability_zone, instance_count) '''
@@ -106,10 +108,7 @@ def summarize_tuples(items):
 if __name__ == '__main__':
     conn = boto.ec2.connect_to_region(options.region)
     #instances = [i for r in conn.get_all_instances() for i in r.instances]
-    instances = [i for r in conn.get_all_instances() for i in r.instances if 'Map' in r.groups[i].id ]
-
-    print instances
-    sys.exit(0)
+    instances = [i for r in conn.get_all_instances() for i in r.instances if not re.match(options.exclude, r.groups[0].name) ]
 
     active_reservations = [i for i in conn.get_all_reserved_instances() if 'active' in i.state]
 
@@ -132,8 +131,10 @@ if __name__ == '__main__':
 
 
     ''' identify non-reserved running instances '''
+
     all_instances = [(ins.instance_type, ins.placement, 1) for ins in instances if "running" in ins.state]
     ins_dict = summarize_tuples(all_instances).iteritems()
+
     print "\nSummary of running instances, and their reserved instances:\n"
 
     yearly_savings = float(0)
@@ -165,6 +166,7 @@ if __name__ == '__main__':
 
     print table.draw()
     print "\nTotals:"
-    print "running on-demand instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s" % (
+    print "running instances: %i\nrunning reserved instances: %i\nsavings potential:\n\tmonthly: %s, yearly: %s" % (
         num_instances, res_instances, locale.currency(monthly_savings, grouping=True), locale.currency(yearly_savings, grouping=True))
+
 
