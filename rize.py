@@ -82,21 +82,23 @@ rates = { 'us-east-1': { 'm1.small':    { 'hourly': .08,  'hu-1y': (195, .016) }
         }
 
 def costs(item):
-    ''' takes a tuple of properties, and returns ((monthly, yearly) (monthly, yearly)) cost
-        of (ondemand, 1-yr-heavy-utilization-ri)
-        imput: ((instance_type, availability_zone), instance_count) '''
-    monthly_ondemand = item[1]*float(730*float(rates[options.region][item[0][0]]['hourly']))
+    ''' takes a tuple of properties, and returns ((monthly, yearly), (monthly, yearly), upfront) cost
+        of (ondemand, 1-yr-heavy-utilization-ri).. for one instance.
+        imput: (instance_type, availability_zone) '''
+    instance, zone = item
+    monthly_ondemand = float(730*float(rates[options.region][instance]['hourly']))
     yearly_ondemand = 12*monthly_ondemand
 
-    monthly_ri = item[1]*float(730*float(rates[options.region][item[0][0]]['hu-1y'][1]) + float(rates[options.region][item[0][0]]['hu-1y'][0])/12)
+    monthly_ri = float(730*float(rates[options.region][instance]['hu-1y'][1]) + float(rates[options.region][instance]['hu-1y'][0])/12)
     yearly_ri = 12*monthly_ri
 
-    upfront_cost = item[1]*float(rates[options.region][item[0][0]]['hu-1y'][0])
-    return (('%.2f'%monthly_ondemand, '%.2f'%yearly_ondemand), ('%.2f'%monthly_ri, '%.2f'%yearly_ri), upfront_cost)
+    upfront = float(rates[options.region][instance]['hu-1y'][0])
+
+    return (('%.2f'%monthly_ondemand, '%.2f'%yearly_ondemand), ('%.2f'%monthly_ri, '%.2f'%yearly_ri), upfront)
 
 def summarize_tuples(items):
     ''' takes a tuple of properties, and summarizes into a dict.
-        imput: (instance_type, availability_zone, instance_count) '''
+        input: (instance_type, availability_zone, instance_count) '''
     result = {}
     for res in items:
         key = (res[0], res[1])
@@ -151,21 +153,39 @@ if __name__ == '__main__':
     table.add_row(["instance type", "zone", "# running", "# reserved", "monthly savings", "yearly savings"])
 
     for i in sorted(ins_dict):
+        # dict i is: {(inst_type, az): count}
+
+        # find # of reserved instances, and # on-demand:
         if i[0] in res_dict: res_count = res_dict[i[0]]
         else: res_count = 0
 
-        cost = costs(tuple(i))
+        od_count = i[1]
 
-        monthly = float(cost[0][0]) - float(cost[1][0])
-        yearly = float(cost[0][1]) - float(cost[1][1])
+        od, ri, upfront = costs(tuple(i[0]))
+        od_monthly, od_yearly = od
+        ri_monthly, ri_yearly = ri
+
+        # determine monthly savings, if we're running more than are reserved:
+        diff = int(od_count) - int(res_count)
+
+        if diff > 0:
+            monthly = diff*(float(od_monthly) - float(ri_monthly))
+            yearly = diff*(float(od_yearly) - float(ri_yearly))
+            upfront_cur = float(upfront*diff)
+        else:
+            monthly = 0
+            yearly = 0
+            upfront_cur = 0
+
+        # totals
         yearly_savings += yearly
         monthly_savings += monthly
-        upfront_cost += float(cost[2])
+        upfront_cost += float(upfront_cur)
 
-        num_instances += int(i[1])
+        num_instances += int(od_count)
         res_instances += int(res_count)
 
-        table.add_row([i[0][0], i[0][1], i[1], res_count, locale.currency(monthly, grouping=True), locale.currency(yearly, grouping=True)])
+        table.add_row([i[0][0], i[0][1], od_count, res_count, locale.currency(monthly, grouping=True), locale.currency(yearly, grouping=True)])
 
     print table.draw()
     print "\nTotals:"
