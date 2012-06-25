@@ -128,7 +128,7 @@ if __name__ == '__main__':
     ''' find cases where we're running fewer instances than we've reserved '''
     for res in active_reservations:
         matches = [i for i in instances if res.availability_zone in i.placement]
-        running = len([i.instance_type for i in matches if i.instance_type in res.instance_type])
+        running = len([i.instance_type for i in matches if i.instance_type in res.instance_type and "running" in i.state])
         if running < res.instance_count:
             print "ERR: only %i running %s instances in %s, but %i are reserved!" % (running, res.instance_type, res.availability_zone, res.instance_count)
 
