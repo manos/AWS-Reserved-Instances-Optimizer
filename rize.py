@@ -164,13 +164,8 @@ if __name__ == '__main__':
         run_count = int(i[1])
 
         od, ri, upfront = costs(tuple(i[0]))
-        od_monthly, od_yearly = od
-        ri_monthly, ri_yearly = ri
-
-        od_monthly = float(od_monthly)
-        od_yearly = float(od_yearly)
-        ri_monthly = float(ri_monthly)
-        ri_yearly = float(ri_yearly)
+        od_monthly, od_yearly = [float(x) for x in od]
+        ri_monthly, ri_yearly = [float(x) for x in ri]
 
         # determine monthly savings, if we're running more than are reserved:
         od_count = int(run_count) - int(res_count)
