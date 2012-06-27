@@ -14,7 +14,7 @@ Requires: ~/.boto, boto lib, texttable lib
 Running:
 ./rize.py
 
-# run, but exclude instances matching -e regex
+# run, but exclude instances with security group matching -e <regex>
 ./rize.py -e '^ElasticMap.*'
 
 # run in us-west-2,
