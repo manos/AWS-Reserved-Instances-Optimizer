@@ -163,6 +163,8 @@ if __name__ == '__main__':
 
         run_count = int(i[1])
 
+        inst_type, az = i[0]
+
         od, ri, upfront = costs(tuple(i[0]))
         od_monthly, od_yearly = [float(x) for x in od]
         ri_monthly, ri_yearly = [float(x) for x in ri]
@@ -197,7 +199,7 @@ if __name__ == '__main__':
         total_instances += int(run_count)
         res_instances += int(res_count)
 
-        table.add_row([i[0][0], i[0][1], run_count, res_count, locale.currency(monthly, grouping=True),
+        table.add_row([inst_type, az, run_count, res_count, locale.currency(monthly, grouping=True),
             locale.currency(yearly, grouping=True), locale.currency(cur_monthly, grouping=True), locale.currency(all_ri_monthly, grouping=True)
             ])
 
