@@ -132,7 +132,7 @@ if __name__ == '__main__':
         running = len([i.instance_type for i in matches if i.instance_type in res.instance_type and "running" in i.state])
 
         if running < res.instance_count:
-            waste = float(costs((res.instance_type, res.instance_count))[1][0]) * res.instance_count
+            waste = float(costs((res.instance_type, res.instance_count))[1][0]) * (res.instance_count - running)
             total_waste += waste
 
             print "ERR: only %i running %s instances in %s, but %s are reserved! Monthly waste: %s" % (running, res.instance_type,
