@@ -141,8 +141,6 @@ if __name__ == '__main__':
     if total_waste > 0:
         print "\nTotal monthly waste: %s\n" % locale.currency(total_waste, grouping=True)
 
-    #TODO: print total monthly cost of these.
-
 
     ''' identify non-reserved running instances '''
 
@@ -219,6 +217,9 @@ if __name__ == '__main__':
             locale.currency(yearly_savings, grouping=True), locale.currency(monthly_od_sum, grouping=True), locale.currency(monthly_ri_sum, grouping=True)
             ])
     print table.draw()
+
+    ''' more summaries '''
+
     print "\n== Savings Potential (reserve all on-demand instances) =="
     print "monthly: %s, yearly: %s\nupfront cost (already amortized in 'savings' calculations): %s" % (
         locale.currency(monthly_savings, grouping=True),
