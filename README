@@ -1,9 +1,10 @@
 rize.py:
 
 Script to analyze reserved instance utilization.
+Currently: assumes 1-year heavy utilization reserved instances.
 
 Identifies:
-  - reservations that aren't being used
+  - reservations that aren't being used (and the total monthly cost/waste)
   - running instances that aren't reserved
   - cost savings if you were to reserve all running on-demand instances
 

@@ -126,11 +126,22 @@ if __name__ == '__main__':
         sys.exit(0)
 
     ''' find cases where we're running fewer instances than we've reserved '''
+    total_waste = 0
     for res in active_reservations:
         matches = [i for i in instances if res.availability_zone in i.placement]
         running = len([i.instance_type for i in matches if i.instance_type in res.instance_type and "running" in i.state])
+
         if running < res.instance_count:
-            print "ERR: only %i running %s instances in %s, but %i are reserved!" % (running, res.instance_type, res.availability_zone, res.instance_count)
+            waste = float(costs((res.instance_type, res.instance_count))[1][0]) * res.instance_count
+            total_waste += waste
+
+            print "ERR: only %i running %s instances in %s, but %s are reserved! Monthly waste: %s" % (running, res.instance_type,
+                    res.availability_zone, res.instance_count, locale.currency(waste, grouping=True))
+
+    if total_waste > 0:
+        print "\nTotal monthly waste: %s\n" % locale.currency(total_waste, grouping=True)
+
+    #TODO: print total monthly cost of these.
 
 
     ''' identify non-reserved running instances '''
@@ -138,7 +149,7 @@ if __name__ == '__main__':
     all_instances = [(ins.instance_type, ins.placement, 1) for ins in instances if "running" in ins.state]
     ins_dict = summarize_tuples(all_instances).iteritems()
 
-    print "\nSummary of running instances, and their reserved instances:\n"
+    print "\n== Summary of running instances, and their reserved instances ==\n"
 
     yearly_savings = float(0)
     monthly_savings = float(0)
@@ -208,9 +219,17 @@ if __name__ == '__main__':
             locale.currency(yearly_savings, grouping=True), locale.currency(monthly_od_sum, grouping=True), locale.currency(monthly_ri_sum, grouping=True)
             ])
     print table.draw()
-    print "\nsavings potential:\n\tmonthly: %s, yearly: %s\nupfront cost (already amortized in 'savings' calculations): %s" % (
+    print "\n== Savings Potential (reserve all on-demand instances) =="
+    print "monthly: %s, yearly: %s\nupfront cost (already amortized in 'savings' calculations): %s" % (
         locale.currency(monthly_savings, grouping=True),
         locale.currency(yearly_savings, grouping=True), locale.currency(upfront_cost, grouping=True)
         )
+
+    print "\n== Current Costs (including waste; i.e. unused RIs) =="
+    real_monthly = monthly_od_sum + total_waste
+    real_yearly = real_monthly * 12
+
+    print "Current total monthly expense: %s" % locale.currency(real_monthly, grouping=True)
+    print "Current total yearly expense: %s" % locale.currency(real_yearly, grouping=True)
 
 
