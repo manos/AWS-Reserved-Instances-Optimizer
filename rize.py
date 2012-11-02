@@ -41,10 +41,11 @@ else:             log_level = logging.INFO
 logging.basicConfig(stream=sys.stdout, level=log_level)
 logging.basicConfig(stream=sys.stderr, level=(logging.ERROR,logging.CRITICAL))
 
-rates = { 'us-east-1': { 'm1.small':    { 'hourly': .08,  'hu-1y': (195, .016) },
-                         'm1.medium':   { 'hourly': .16,  'hu-1y': (390, .032) },
-                         'm1.large':    { 'hourly': .32,  'hu-1y': (780, .064) },
-                         'm1.xlarge':   { 'hourly': .64,  'hu-1y': (1560, .128) },
+rates = { 'us-east-1': { 'm1.small':    { 'hourly': .065,  'hu-1y': (195, .016) },
+                         'm1.medium':   { 'hourly': .13,  'hu-1y': (390, .032) },
+                         'm1.large':    { 'hourly': .26,  'hu-1y': (780, .064) },
+                         'm1.xlarge':   { 'hourly': .52,  'hu-1y': (1560, .128) },
+                         # TODO: when RI pricing is out, add m3.{xlarge,2xlarge}
                          't1.micro':    { 'hourly': .02,  'hu-1y': (62, .005) },
                          'm2.xlarge':   { 'hourly': .45,  'hu-1y': (1030, .088) },
                          'm2.2xlarge':  { 'hourly': .90,  'hu-1y': (2060, .176) },
