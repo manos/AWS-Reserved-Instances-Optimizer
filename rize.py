@@ -115,7 +115,7 @@ if __name__ == '__main__':
     #instances = [i for r in conn.get_all_instances() for i in r.instances]
     instances = [i for r in conn.get_all_instances() for i in r.instances if not re.match(options.exclude, r.groups[0].name) ]
 
-    active_reservations = [i for i in conn.get_all_reserved_instances() if 'active' in i.state]
+    active_reservations = [i for i in conn.get_all_reserved_instances() if 'active' in i.state or 'payment-pending' in i.state]
 
     all_res = [(res.instance_type, res.availability_zone, res.instance_count) for res in active_reservations]
     res_dict = summarize_tuples(all_res)
