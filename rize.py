@@ -19,6 +19,7 @@
 import sys
 import os
 import re
+import math
 import logging
 import boto.ec2
 import locale
@@ -286,3 +287,11 @@ if __name__ == '__main__':
         locale.currency(real_monthly, grouping=True))
     print "Current total yearly expense: %s" % (
         locale.currency(real_yearly, grouping=True))
+
+    """ Adding time-to-recover idea by Ozzie Sabina:
+    https://github.com/osabina/AWS-Reserved-Instances-Optimizer/commit/fc8b466dcec057f1c9958ee418e1f655719ae31f
+    """
+    rf, rm = math.modf(upfront_cost / (monthly_savings + (upfront_cost / 12)))
+    rd = rf * 30
+    print "Time to recover up-front cost: %s months, %s days.\n" % (
+          int(rm), int(rd))
