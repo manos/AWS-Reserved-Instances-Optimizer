@@ -24,3 +24,5 @@ Running:
 # list all reserved instances and exit
 ./rize.py -l
 
+# operate only on VPC instances/reservations
+./rize.py --vpc
