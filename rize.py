@@ -141,6 +141,8 @@ if __name__ == '__main__':
 
     conn = boto.ec2.connect_to_region(options.region)
 
+    # not filtering by security group? it'll break with vpc instances that
+    # don't have a 'name' attribute, so don't even try:
     if "None" not in options.exclude:
         instances = [i for r in conn.get_all_instances()
                      for i in r.instances
@@ -153,10 +155,15 @@ if __name__ == '__main__':
                            or 'payment-pending' in i.state]
 
     # re-set list of instances and reservations to only VPC ones, if --vpc
+    # otherwise, exclude VPC instances/reservations. *hacky*
     if options.vpc:
         active_reservations = [res for res in active_reservations
                                if "VPC" in res.description]
         instances = [inst for inst in instances if inst.vpc_id]
+    else:
+        active_reservations = [res for res in active_reservations
+                               if "VPC" not in res.description]
+        instances = [inst for inst in instances if inst.vpc_id is None]
 
     # no instances were found, just bail:
     if len(active_reservations) == 0 or len(instances) == 0:
