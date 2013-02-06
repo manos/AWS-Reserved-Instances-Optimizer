@@ -1,4 +1,6 @@
 #!/usr/bin/env python2.7
+# -*- coding: utf-8 -*-
+
 #
 # @Author: "Charlie Schluting <charlie@schluting.com>"
 # @Date:   June 2012
@@ -12,6 +14,9 @@
 #
 # TODO: how to handle light/medium utilization instances? This script assumes /
 # only cares about heavy-utilization 1-year reserved instances.
+#
+# TODO: I'm formatting currency based on locale, but doesn't AWS always
+# charge in $USD?
 #
 # Requires: ~/.boto, boto lib, texttable lib
 #
@@ -201,11 +206,12 @@ if __name__ == '__main__':
                   "reserved! Monthly waste: " \
                   "%s" % (running, res.instance_type,
                           res.availability_zone, res.instance_count,
-                          locale.currency(waste, grouping=True))
+                          locale.currency(waste, grouping=True).decode(locale.getpreferredencoding())
+                          )
 
     if total_waste > 0:
         print "\nTotal monthly waste: %s\n" % locale.currency(total_waste,
-                                                              grouping=True)
+                                                              grouping=True).decode(locale.getpreferredencoding())
 
     ''' identify non-reserved running instances '''
 
@@ -317,8 +323,13 @@ if __name__ == '__main__':
 
     """ Adding time-to-recover idea by Ozzie Sabina:
     https://github.com/osabina/AWS-Reserved-Instances-Optimizer/commit/fc8b466dcec057f1c9958ee418e1f655719ae31f
+    ZeroDivisionError may happen, if all instances are reserved.
     """
-    rf, rm = math.modf(upfront_cost / (monthly_savings + (upfront_cost / 12)))
-    rd = rf * 30
-    print "Time to recover up-front cost: %s months, %s days.\n" % (
-          int(rm), int(rd))
+    try:
+        rf, rm = math.modf(upfront_cost
+                           / (monthly_savings + (upfront_cost / 12)))
+        rd = rf * 30
+        print "Time to recover up-front cost: %s months, %s days.\n" % (
+              int(rm), int(rd))
+    except ZeroDivisionError:
+        pass
