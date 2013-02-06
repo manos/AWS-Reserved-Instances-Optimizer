@@ -35,8 +35,10 @@ parser.add_option("-l", "--list", default=None, action="store_true",
                   help="list all reservations and exit")
 parser.add_option("-e", "--exclude", metavar="regex", default='__None__',
                   help="exclude instances by security group name. takes regex")
-parser.add_option(
-    "-r", "--region", default='us-east-1', help="ec2 region to connect to")
+parser.add_option("-r", "--region", default='us-east-1',
+                  help="ec2 region to connect to")
+parser.add_option("--vpc", default=False, action="store_true",
+                  help="operate on VPC instances/reservations only")
 (options, args) = parser.parse_args()
 
 # set up logging
@@ -131,6 +133,12 @@ def summarize_tuples(items):
     return result
 
 if __name__ == '__main__':
+    # TODO: security group based filtering doesn't work on VPC instances.
+    if "None" not in options.exclude and options.vpc:
+        logging.error("Sorry, you can't currently exclude by security group "
+                      "regex with VPC enabled.")
+        sys.exit(1)
+
     conn = boto.ec2.connect_to_region(options.region)
 
     if "None" not in options.exclude:
@@ -143,6 +151,18 @@ if __name__ == '__main__':
     active_reservations = [i for i in conn.get_all_reserved_instances()
                            if 'active' in i.state
                            or 'payment-pending' in i.state]
+
+    # re-set list of instances and reservations to only VPC ones, if --vpc
+    if options.vpc:
+        active_reservations = [res for res in active_reservations
+                               if "VPC" in res.description]
+        instances = [inst for inst in instances if inst.vpc_id]
+
+    # no instances were found, just bail:
+    if len(active_reservations) == 0 or len(instances) == 0:
+        logging.error("Sorry, either instances or reservations have 0 "
+                      "results. Nothing to do.")
+        sys.exit(1)
 
     all_res = [(res.instance_type, res.availability_zone,
                 res.instance_count) for res in active_reservations]
