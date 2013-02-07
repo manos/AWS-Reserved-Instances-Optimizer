@@ -84,7 +84,19 @@ rates = {'us-east-1': {'m1.small': {'hourly': .06, 'hu-1y': (195, .016)},
                        'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (4120, .352)},
                        'c1.medium': {'hourly': .145, 'hu-1y': (500, .04)},
                        'c1.xlarge': {'hourly': .58, 'hu-1y': (2000, .16)},
-
+                       },
+         'us-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (195, .025)},
+                       'm1.medium': {'hourly': .13, 'hu-1y': (390, .05)},
+                       'm1.large': {'hourly': .26, 'hu-1y': (780, .10)},
+                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1560, .20)},
+                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1716, .141)},
+                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (3432, .282)},
+                       't1.micro': {'hourly': .025, 'hu-1y': (62, .008)},
+                       'm2.xlarge': {'hourly': .46, 'hu-1y': (1030, .148)},
+                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (2060, .296)},
+                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (4120, .592)},
+                       'c1.medium': {'hourly': .165, 'hu-1y': (500, .063)},
+                       'c1.xlarge': {'hourly': .66, 'hu-1y': (2000, .25)},
                        },
          'eu-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (195, .025)},
                        'm1.medium': {'hourly': .13, 'hu-1y': (390, .05)},
@@ -144,6 +156,11 @@ if __name__ == '__main__':
                       "regex with VPC enabled.")
         sys.exit(1)
 
+    if options.region and options.region not in rates:
+        logging.error("Sorry, region %s is not currently supported"
+                      "." % options.region)
+        sys.exit(1)
+
     conn = boto.ec2.connect_to_region(options.region)
 
     # not filtering by security group? it'll break with vpc instances that
@@ -171,9 +188,9 @@ if __name__ == '__main__':
         instances = [inst for inst in instances if inst.vpc_id is None]
 
     # no instances were found, just bail:
-    if len(active_reservations) == 0 or len(instances) == 0:
-        logging.error("Sorry, either instances or reservations have 0 "
-                      "results. Nothing to do.")
+    if len(instances) == 0:
+        logging.error("Sorry, you don't seem to have any instances "
+                      "here. Nothing to do. (try --vpc?)")
         sys.exit(1)
 
     all_res = [(res.instance_type, res.availability_zone,
