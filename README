@@ -8,7 +8,7 @@ Identifies:
   - running instances that aren't reserved
   - cost savings if you were to reserve all running on-demand instances
 
-Supports us-east-1, us-west-2, eu-west-1.
+Supports us-east-1, us-west-1, us-west-2, eu-west-1.
 
 Requires: ~/.boto, boto lib, texttable lib
 
