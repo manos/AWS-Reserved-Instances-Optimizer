@@ -14,15 +14,18 @@ Supported regions: us-east-1, us-west-1, us-west-2, eu-west-1.
 
 ## Prerequisites
 You'll need to install `boto` and `texttable`:
-`easy_install boto`
-`easy_install texttable`
+```
+easy_install boto
+easy_install texttable
+```
 
 Then configure `boto` with your AWS key:
 ```
-cat > ~/.boto
+cat <<EOF > ~/.boto
 [Credentials]
 aws_access_key_id = foo
-aws_secret_access_key = bar`
+aws_secret_access_key = bar
+EOF
 ```
 
 ## Running:
