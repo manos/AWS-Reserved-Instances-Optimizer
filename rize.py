@@ -38,6 +38,8 @@ parser.add_option("-d", "--debug", default=None, action="store_true",
                   help="enable debug output")
 parser.add_option("-l", "--list", default=None, action="store_true",
                   help="list all reservations and exit")
+parser.add_option("-p", "--print-monthly", default=None, action="store_true",
+                  help="list all reservations instances' monthly cost (1-yr ri)")
 parser.add_option("-e", "--exclude", metavar="regex", default='__None__',
                   help="exclude instances by security group name. takes regex")
 parser.add_option("-r", "--region", default='us-east-1',
@@ -55,61 +57,67 @@ else:
 logging.basicConfig(stream=sys.stdout, level=log_level)
 logging.basicConfig(stream=sys.stderr, level=(logging.ERROR, logging.CRITICAL))
 
-rates = {'us-east-1': {'m1.small': {'hourly': .06, 'hu-1y': (195, .016)},
-                       'm1.medium': {'hourly': .12, 'hu-1y': (390, .032)},
-                       'm1.large': {'hourly': .24, 'hu-1y': (780, .064)},
-                       'm1.xlarge': {'hourly': .48, 'hu-1y': (1560, .128)},
-                       'm3.xlarge': {'hourly': .50, 'hu-1y': (1716, .141)},
-                       'm3.2xlarge': {'hourly': 1.00, 'hu-1y': (3432, .282)},
+rates = {'us-east-1': {'m1.small': {'hourly': .06, 'hu-1y': (169, .014)},
+                       'm1.medium': {'hourly': .12, 'hu-1y': (338, .028)},
+                       'm1.large': {'hourly': .24, 'hu-1y': (676, .056)},
+                       'm1.xlarge': {'hourly': .48, 'hu-1y': (1352, .112)},
+                       'm3.xlarge': {'hourly': .50, 'hu-1y': (1489, .123)},
+                       'm3.2xlarge': {'hourly': 1.00, 'hu-1y': (2978, .246)},
                        't1.micro': {'hourly': .02, 'hu-1y': (62, .005)},
-                       'm2.xlarge': {'hourly': .41, 'hu-1y': (1030, .088)},
-                       'm2.2xlarge': {'hourly': .82, 'hu-1y': (2060, .176)},
-                       'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (4120, .352)},
-                       'c1.medium': {'hourly': .145, 'hu-1y': (500, .04)},
-                       'c1.xlarge': {'hourly': .58, 'hu-1y': (2000, .16)},
+                       'm2.xlarge': {'hourly': .41, 'hu-1y': (789, .068)},
+                       'm2.2xlarge': {'hourly': .82, 'hu-1y': (1578, .136)},
+                       'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (3156, .272)},
+                       'c1.medium': {'hourly': .145, 'hu-1y': (450, .036)},
+                       'c1.xlarge': {'hourly': .58, 'hu-1y': (1800, .144)},
                        'cc1.4xlarge': {'hourly': 1.30, 'hu-1y': (4060, .297)},
                        'cc2.8xlarge': {'hourly': 2.40, 'hu-1y': (5000, .361)},
-                       'cg1.4xlarge': {'hourly': 2.10, 'hu-1y': (6830, .494)},
-
+                       'cr1.8xlarge': {'hourly': 3.50, 'hu-1y': (7220, .62)},
+                       'hi1.4xlarge': {'hourly': 3.10, 'hu-1y': (7280, .621)},
+                       'hs1.8xlarge': {'hourly': 4.60, 'hu-1y': (11213, .92)},
                        },
-         'us-west-2': {'m1.small': {'hourly': .06, 'hu-1y': (195, .016)},
-                       'm1.medium': {'hourly': .12, 'hu-1y': (390, .032)},
-                       'm1.large': {'hourly': .24, 'hu-1y': (780, .064)},
-                       'm1.xlarge': {'hourly': .48, 'hu-1y': (1560, .128)},
-                       'm3.xlarge': {'hourly': .50, 'hu-1y': (1716, .141)},
-                       'm3.2xlarge': {'hourly': 1.00, 'hu-1y': (3432, .282)},
+         'us-west-2': {'m1.small': {'hourly': .06, 'hu-1y': (169, .014)},
+                       'm1.medium': {'hourly': .12, 'hu-1y': (338, .028)},
+                       'm1.large': {'hourly': .24, 'hu-1y': (676, .056)},
+                       'm1.xlarge': {'hourly': .48, 'hu-1y': (1352, .112)},
+                       'm3.xlarge': {'hourly': .50, 'hu-1y': (1489, .123)},
+                       'm3.2xlarge': {'hourly': 1.00, 'hu-1y': (2978, .256)},
                        't1.micro': {'hourly': .02, 'hu-1y': (62, .005)},
-                       'm2.xlarge': {'hourly': .41, 'hu-1y': (1030, .088)},
-                       'm2.2xlarge': {'hourly': .82, 'hu-1y': (2060, .176)},
-                       'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (4120, .352)},
-                       'c1.medium': {'hourly': .145, 'hu-1y': (500, .04)},
-                       'c1.xlarge': {'hourly': .58, 'hu-1y': (2000, .16)},
+                       'm2.xlarge': {'hourly': .41, 'hu-1y': (789, .068)},
+                       'm2.2xlarge': {'hourly': .82, 'hu-1y': (1578, .136)},
+                       'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (3156, .272)},
+                       'c1.medium': {'hourly': .145, 'hu-1y': (450, .036)},
+                       'c1.xlarge': {'hourly': .58, 'hu-1y': (1800, .144)},
+                       'cr1.8xlarge': {'hourly': 3.50, 'hu-1y': (7220, .62)},
+                       'hi1.4xlarge': {'hourly': 3.10, 'hu-1y': (7280, .621)},
+                       'hs1.8xlarge': {'hourly': 4.60, 'hu-1y': (11213, .92)},
                        },
-         'us-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (195, .025)},
-                       'm1.medium': {'hourly': .13, 'hu-1y': (390, .05)},
-                       'm1.large': {'hourly': .26, 'hu-1y': (780, .10)},
-                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1560, .20)},
-                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1716, .141)},
-                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (3432, .282)},
+         'us-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (169, .022)},
+                       'm1.medium': {'hourly': .13, 'hu-1y': (338, .044)},
+                       'm1.large': {'hourly': .26, 'hu-1y': (676, .87)},
+                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1352, .174)},
+                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1489, .191)},
+                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (2978, .382)},
                        't1.micro': {'hourly': .025, 'hu-1y': (62, .008)},
-                       'm2.xlarge': {'hourly': .46, 'hu-1y': (1030, .148)},
-                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (2060, .296)},
-                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (4120, .592)},
-                       'c1.medium': {'hourly': .165, 'hu-1y': (500, .063)},
-                       'c1.xlarge': {'hourly': .66, 'hu-1y': (2000, .25)},
+                       'm2.xlarge': {'hourly': .46, 'hu-1y': (789, .102)},
+                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (1578, .204)},
+                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (3156, .408)},
+                       'c1.medium': {'hourly': .165, 'hu-1y': (450, .057)},
+                       'c1.xlarge': {'hourly': .66, 'hu-1y': (1800, .228)},
                        },
-         'eu-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (195, .025)},
-                       'm1.medium': {'hourly': .13, 'hu-1y': (390, .05)},
-                       'm1.large': {'hourly': .26, 'hu-1y': (780, .10)},
-                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1560, .20)},
-                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1716, .141)},
-                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (3432, .282)},
+         'eu-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (169, .022)},
+                       'm1.medium': {'hourly': .13, 'hu-1y': (338, .044)},
+                       'm1.large': {'hourly': .26, 'hu-1y': (676, .87)},
+                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1352, .174)},
+                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1489, .189)},
+                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (2978, .378)},
                        't1.micro': {'hourly': .02, 'hu-1y': (62, .008)},
-                       'm2.xlarge': {'hourly': .46, 'hu-1y': (1030, .148)},
-                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (2060, .296)},
-                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (4120, .592)},
-                       'c1.medium': {'hourly': .165, 'hu-1y': (500, .063)},
-                       'c1.xlarge': {'hourly': .66, 'hu-1y': (2000, .25)},
+                       'm2.xlarge': {'hourly': .46, 'hu-1y': (789, .102)},
+                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (1578, .204)},
+                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (3156, .408)},
+                       'c1.medium': {'hourly': .165, 'hu-1y': (450, .057)},
+                       'c1.xlarge': {'hourly': .66, 'hu-1y': (1800, .228)},
+                       'cc2.8xlarge': {'hourly': 2.70, 'hu-1y': (5000, .61)},
+                       'hi1.4xlarge': {'hourly': 3.41, 'hu-1y': (7280, .931)},
                        },
          }
 
@@ -118,7 +126,7 @@ def costs(item):
     """ takes a tuple of properties, and returns:
         ((monthly, yearly), (monthly, yearly), upfront) cost
         of (ondemand, 1-yr-heavy-utilization-ri).. for one instance.
-        imput: (instance_type, availability_zone)
+        imput: (instance_type, region)
     """
     instance, zone = item
     monthly_ondemand = float(
@@ -160,6 +168,19 @@ if __name__ == '__main__':
         logging.error("Sorry, region %s is not currently supported"
                       "." % options.region)
         sys.exit(1)
+
+    ''' just print monthly prices, if -p was used '''
+    if options.print_monthly:
+        print "Current monthly pricing (1-year reserved) per instance type:"
+        for _zone, _rates in rates.iteritems():
+            if options.region not in _zone:
+                continue
+            _query = _zone, _rates.keys()
+            _output = [("%s: " % instance, costs((instance, _zone))[1][0]) for instance in _query[1]]
+            for inst, cost in sorted(_output, key=lambda x: float(x[1])):
+                print "%s\t%s" % (inst, cost)
+
+        sys.exit(0)
 
     conn = boto.ec2.connect_to_region(options.region)
 
