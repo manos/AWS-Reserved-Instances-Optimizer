@@ -7,8 +7,9 @@ Identifies:
   - reservations that aren't being used (and the total monthly cost/waste)
   - running instances that aren't reserved
   - cost savings if you were to reserve all running on-demand instances
+  - time to recoup up-front reservation costs
 
-Supports us-east-1, us-west-2, eu-west-1.
+Supports us-east-1, us-west-1, us-west-2, eu-west-1.
 
 Requires: ~/.boto, boto lib, texttable lib
 
