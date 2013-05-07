@@ -189,7 +189,7 @@ if __name__ == '__main__':
     if "None" not in options.exclude:
         instances = [i for r in conn.get_all_instances()
                      for i in r.instances
-                     if not re.match(options.exclude, r.groups[0].name)]
+                     if len(r.groups) > 0 and not re.match(options.exclude, r.groups[0].name)]
     else:
         instances = [i for r in conn.get_all_instances() for i in r.instances]
 
