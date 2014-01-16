@@ -10,7 +10,8 @@ Currently: assumes 1-year heavy utilization reserved instances.
 * Cost savings if you were to reserve all running on-demand instances
 * Time to recoup up-front reservation costs
 
-Supported regions: us-east-1, us-west-1, us-west-2, eu-west-1.
+JSON Data is downloaded automatically from www.cloudomix.com
+and has support for all regions at time of writing
 
 ## Prerequisites
 You'll need to install `boto` and `texttable`:
