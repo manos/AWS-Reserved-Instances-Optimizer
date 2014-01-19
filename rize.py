@@ -29,6 +29,8 @@ import logging
 import boto.ec2
 import locale
 import texttable
+import json
+import urllib2
 from optparse import OptionParser
 
 locale.setlocale(locale.LC_ALL, '')
@@ -46,6 +48,8 @@ parser.add_option("-r", "--region", default='us-east-1',
                   help="ec2 region to connect to")
 parser.add_option("--vpc", default=False, action="store_true",
                   help="operate on VPC instances/reservations only")
+parser.add_option("-j", "--json", default='ec2.json',
+                  help="json price file to read in or write to")
 (options, args) = parser.parse_args()
 
 # set up logging
@@ -57,89 +61,66 @@ else:
 logging.basicConfig(stream=sys.stdout, level=log_level)
 logging.basicConfig(stream=sys.stderr, level=(logging.ERROR, logging.CRITICAL))
 
-rates = {'us-east-1': {'m1.small': {'hourly': .06, 'hu-1y': (169, .014)},
-                       'm1.medium': {'hourly': .12, 'hu-1y': (338, .028)},
-                       'm1.large': {'hourly': .24, 'hu-1y': (676, .056)},
-                       'm1.xlarge': {'hourly': .48, 'hu-1y': (1352, .112)},
-                       'm3.xlarge': {'hourly': .50, 'hu-1y': (1489, .123)},
-                       'm3.2xlarge': {'hourly': 1.00, 'hu-1y': (2978, .246)},
-                       't1.micro': {'hourly': .02, 'hu-1y': (62, .005)},
-                       'm2.xlarge': {'hourly': .41, 'hu-1y': (789, .068)},
-                       'm2.2xlarge': {'hourly': .82, 'hu-1y': (1578, .136)},
-                       'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (3156, .272)},
-                       'c1.medium': {'hourly': .145, 'hu-1y': (450, .036)},
-                       'c1.xlarge': {'hourly': .58, 'hu-1y': (1800, .144)},
-                       'cc1.4xlarge': {'hourly': 1.30, 'hu-1y': (4060, .297)},
-                       'cc2.8xlarge': {'hourly': 2.40, 'hu-1y': (5000, .361)},
-                       'cr1.8xlarge': {'hourly': 3.50, 'hu-1y': (7220, .62)},
-                       'hi1.4xlarge': {'hourly': 3.10, 'hu-1y': (7280, .621)},
-                       'hs1.8xlarge': {'hourly': 4.60, 'hu-1y': (11213, .92)},
-                       },
-         'us-west-2': {'m1.small': {'hourly': .06, 'hu-1y': (169, .014)},
-                       'm1.medium': {'hourly': .12, 'hu-1y': (338, .028)},
-                       'm1.large': {'hourly': .24, 'hu-1y': (676, .056)},
-                       'm1.xlarge': {'hourly': .48, 'hu-1y': (1352, .112)},
-                       'm3.xlarge': {'hourly': .50, 'hu-1y': (1489, .123)},
-                       'm3.2xlarge': {'hourly': 1.00, 'hu-1y': (2978, .256)},
-                       't1.micro': {'hourly': .02, 'hu-1y': (62, .005)},
-                       'm2.xlarge': {'hourly': .41, 'hu-1y': (789, .068)},
-                       'm2.2xlarge': {'hourly': .82, 'hu-1y': (1578, .136)},
-                       'm2.4xlarge': {'hourly': 1.64, 'hu-1y': (3156, .272)},
-                       'c1.medium': {'hourly': .145, 'hu-1y': (450, .036)},
-                       'c1.xlarge': {'hourly': .58, 'hu-1y': (1800, .144)},
-                       'cr1.8xlarge': {'hourly': 3.50, 'hu-1y': (7220, .62)},
-                       'hi1.4xlarge': {'hourly': 3.10, 'hu-1y': (7280, .621)},
-                       'hs1.8xlarge': {'hourly': 4.60, 'hu-1y': (11213, .92)},
-                       },
-         'us-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (169, .022)},
-                       'm1.medium': {'hourly': .13, 'hu-1y': (338, .044)},
-                       'm1.large': {'hourly': .26, 'hu-1y': (676, .87)},
-                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1352, .174)},
-                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1489, .191)},
-                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (2978, .382)},
-                       't1.micro': {'hourly': .025, 'hu-1y': (62, .008)},
-                       'm2.xlarge': {'hourly': .46, 'hu-1y': (789, .102)},
-                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (1578, .204)},
-                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (3156, .408)},
-                       'c1.medium': {'hourly': .165, 'hu-1y': (450, .057)},
-                       'c1.xlarge': {'hourly': .66, 'hu-1y': (1800, .228)},
-                       },
-         'eu-west-1': {'m1.small': {'hourly': .065, 'hu-1y': (169, .022)},
-                       'm1.medium': {'hourly': .13, 'hu-1y': (338, .044)},
-                       'm1.large': {'hourly': .26, 'hu-1y': (676, .87)},
-                       'm1.xlarge': {'hourly': .52, 'hu-1y': (1352, .174)},
-                       'm3.xlarge': {'hourly': .55, 'hu-1y': (1489, .189)},
-                       'm3.2xlarge': {'hourly': 1.10, 'hu-1y': (2978, .378)},
-                       't1.micro': {'hourly': .02, 'hu-1y': (62, .008)},
-                       'm2.xlarge': {'hourly': .46, 'hu-1y': (789, .102)},
-                       'm2.2xlarge': {'hourly': .92, 'hu-1y': (1578, .204)},
-                       'm2.4xlarge': {'hourly': 1.84, 'hu-1y': (3156, .408)},
-                       'c1.medium': {'hourly': .165, 'hu-1y': (450, .057)},
-                       'c1.xlarge': {'hourly': .66, 'hu-1y': (1800, .228)},
-                       'cc2.8xlarge': {'hourly': 2.70, 'hu-1y': (5000, .61)},
-                       'hi1.4xlarge': {'hourly': 3.41, 'hu-1y': (7280, .931)},
-                       },
-         }
+# Download the API Data file if it doesn't exist already
+if not os.path.isfile(options.json):
+    # Pull down price file
+    logging.info("Downloading price file to %s" % options.json)
+    pricefile = urllib2.urlopen('http://www.cloudomix.com/json/ec2.json')
+    output = open(options.json,'wb')
+    output.write(pricefile.read())
+    output.close()
 
+try:
+    with open(options.json):
+        json_data = open(options.json)
+        rates = json.load(json_data)
+
+except IOError as e:
+    logging.error("Cannot open JSON file %s: %s" % (options.json, e))
+
+def get_friendly_platform(p):
+    """ Get a common friendly platform name to
+        use. This name matches the one we
+        get from the www.cloudomix.com JSON file """
+
+    # Parse provided values from ec2
+    if p == None:
+        new_platform = 'linux'
+    elif p == 'windows':
+        new_platform =  'mswin'
+    # Also cover RI descriptions for matching
+    elif p == 'Linux/UNIX' or p == 'Linux/UNIX (Amazon VPC)':
+        new_platform = 'linux'
+    elif p == 'Windows' or p == 'Windows (Amazon VPC)':
+        new_platform = 'mswin'
+    else:
+        logging.error('Unknown platform provided')
+        sys.exit()
+    return new_platform
 
 def costs(item):
     """ takes a tuple of properties, and returns:
         ((monthly, yearly), (monthly, yearly), upfront) cost
         of (ondemand, 1-yr-heavy-utilization-ri).. for one instance.
-        imput: (instance_type, region)
+        input: (instance_type, platform, region)
     """
-    instance, zone = item
+    instance_type, platform, zone = item
+    try:
+        instance_ondemand = rates[platform][options.region][instance_type]['default']['on-demand'][1:]
+    except KeyError as e:
+        logging.error("KeyError: %s" % e)
+    upfront = float(rates[platform][options.region][instance_type]['default']['ri-heavy-yrTerm1'][1:])
+    instance_ri_hourly = rates[platform][options.region][instance_type]['default']['ri-heavy-yrTerm1Hourly'][1:]
     monthly_ondemand = float(
-        730 * float(rates[options.region][instance]['hourly']))
+        730 * float(instance_ondemand))
     yearly_ondemand = 12 * monthly_ondemand
 
     monthly_ri = float(730
-                       * float(rates[options.region][instance]['hu-1y'][1])
-                       + float(rates[options.region][instance]['hu-1y'][0])
+                       * float(instance_ri_hourly)
+                       + float(upfront)
                        / 12)
     yearly_ri = 12 * monthly_ri
 
-    upfront = float(rates[options.region][instance]['hu-1y'][0])
 
     return (('%.2f' % monthly_ondemand, '%.2f' % yearly_ondemand),
             ('%.2f' % monthly_ri, '%.2f' % yearly_ri), upfront)
@@ -150,11 +131,11 @@ def summarize_tuples(items):
         input: (instance_type, availability_zone, instance_count) '''
     result = {}
     for res in items:
-        key = (res[0], res[1])
+        key = (res[0], res[1], res[2])
         if key not in result:
-            result.update({key: res[2]})
+            result.update({key: res[3]})
         else:
-            result[key] += res[2]
+            result[key] += res[3]
     return result
 
 if __name__ == '__main__':
@@ -164,21 +145,20 @@ if __name__ == '__main__':
                       "regex with VPC enabled.")
         sys.exit(1)
 
-    if options.region and options.region not in rates:
-        logging.error("Sorry, region %s is not currently supported"
-                      "." % options.region)
-        sys.exit(1)
-
     ''' just print monthly prices, if -p was used '''
     if options.print_monthly:
+        omitted = []
         print "Current monthly pricing (1-year reserved) per instance type:"
-        for _zone, _rates in rates.iteritems():
-            if options.region not in _zone:
-                continue
-            _query = _zone, _rates.keys()
-            _output = [("%s: " % instance, costs((instance, _zone))[1][0]) for instance in _query[1]]
-            for inst, cost in sorted(_output, key=lambda x: float(x[1])):
-                print "%s\t%s" % (inst, cost)
+        for instance_type in rates['linux'][options.region]:
+            try:
+                ri_hourly = float(rates['linux'][options.region][instance_type]['default']['ri-heavy-yrTerm1Hourly'][1:])
+                print "%s\t%s" % (instance_type, ri_hourly)
+            except (KeyError, ValueError):
+                logging.debug("Error parsing price for %s" % instance_type)
+                omitted.append(instance_type)
+
+        if omitted:
+            logging.debug("These instances omitted due to non-integer values: %s" % (', '.join(omitted)))
 
         sys.exit(0)
 
@@ -214,7 +194,7 @@ if __name__ == '__main__':
                       "here. Nothing to do. (try --vpc?)")
         sys.exit(1)
 
-    all_res = [(res.instance_type, res.availability_zone,
+    all_res = [(res.instance_type, get_friendly_platform(res.description), res.availability_zone,
                 res.instance_count) for res in active_reservations]
     res_dict = summarize_tuples(all_res)
 
@@ -236,7 +216,7 @@ if __name__ == '__main__':
                 and "running" in i.state])
 
         if running < res.instance_count:
-            waste = float(costs((res.instance_type, res.instance_count))[
+            waste = float(costs((res.instance_type, get_friendly_platform(res.description), res.instance_count))[
                           1][0]) * (res.instance_count - running)
             total_waste += waste
 
@@ -253,7 +233,7 @@ if __name__ == '__main__':
 
     ''' identify non-reserved running instances '''
 
-    all_instances = [(ins.instance_type, ins.placement, 1)
+    all_instances = [(ins.instance_type, get_friendly_platform(ins.platform), ins.placement, 1)
                      for ins in instances if "running" in ins.state]
     ins_dict = summarize_tuples(all_instances).iteritems()
 
@@ -269,14 +249,14 @@ if __name__ == '__main__':
 
     table = texttable.Texttable(max_width=0)
     table.set_deco(texttable.Texttable.HEADER)
-    table.set_cols_dtype(['t', 't', 't', 't', 't', 't', 't', 't'])
-    table.set_cols_align(["l", "c", "c", "c", "r", "r", "r", "r"])
+    table.set_cols_dtype(['t', 't', 't', 't', 't', 't', 't', 't', 't'])
+    table.set_cols_align(["l", "l", "c", "c", "c", "r", "r", "r", "r"])
     table.add_row(
-        ["instance type", "zone", "# running", "# reserved", "monthly savings",
-         "yearly savings", "current monthly", "only_RIs monthly"])
+        ["instance type", "platform", "zone", "# running", "# reserved",
+         "monthly savings", "yearly savings", "current monthly", "only_RIs monthly"])
 
     for i in sorted(ins_dict):
-        # dict i is: {(inst_type, az): count}
+        # dict i is: {(inst_type, platform, az): count}
 
         # find # of reserved instances, and # on-demand:
         if i[0] in res_dict:
@@ -286,7 +266,7 @@ if __name__ == '__main__':
 
         run_count = int(i[1])
 
-        inst_type, az = i[0]
+        inst_type, platform, az = i[0]
 
         od, ri, upfront = costs(tuple(i[0]))
         od_monthly, od_yearly = [float(x) for x in od]
@@ -323,16 +303,16 @@ if __name__ == '__main__':
         res_instances += int(res_count)
 
         table.add_row(
-            [inst_type, az, run_count, res_count,
+            [inst_type, platform, az, run_count, res_count,
              locale.currency(monthly, grouping=True),
              locale.currency(yearly, grouping=True),
              locale.currency(cur_monthly, grouping=True),
              locale.currency(all_ri_monthly, grouping=True),
              ])
 
-    table.add_row(['Totals:', '', '', '', '', '', '', '', ])
+    table.add_row(['Totals:', '', '', '', '', '', '', '', '', ])
     table.add_row(
-        [' ', ' ', total_instances, res_instances,
+        [' ', ' ', ' ', total_instances, res_instances,
             locale.currency(monthly_savings, grouping=True),
             locale.currency(yearly_savings, grouping=True),
             locale.currency(monthly_od_sum, grouping=True),
