@@ -1,3 +1,5 @@
+# Note: not maintained any longer. See issues for what needs updating.
+
 # rize.py
 
 Script to analyze reserved instance utilization.
